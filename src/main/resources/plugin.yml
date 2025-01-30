@@ -1,0 +1,7 @@
+name: SquidGames
+version: 1.0
+main: org.squidgames.SquidGamesPlugin
+commands:
+  sq:
+    description: Main command for SquidGames plugin
+    usage: /<command> [subcommand]
