@@ -81,6 +81,7 @@ public class GameStateHandler {
         sender.sendMessage(ChatColor.RED + "Game stopped!");
         currentState = GameState.STOPPED;
         updateLightColor();
+        plugin.getPlayerMovementListener().removeAllCorpses();
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.getInventory().clear();
             Location lobbyLocation = getLobbyLocation();
@@ -216,7 +217,6 @@ public class GameStateHandler {
             }
         }
         if (allSafeOrEliminated) {
-            stopGame(Bukkit.getConsoleSender());
             GameUtils.displayEndGameResults(plugin, playerStateHandler);
 
             new BukkitRunnable() {
@@ -224,9 +224,8 @@ public class GameStateHandler {
                 public void run() {
                     Location lobbyLocation = getLobbyLocation();
                     if (lobbyLocation != null) {
-                        for (Player player : Bukkit.getOnlinePlayers()) {
-                            player.teleport(lobbyLocation);
-                        }
+                        stopGame(Bukkit.getConsoleSender());
+
                     }
                 }
             }.runTaskLater(plugin, 100); //5s
