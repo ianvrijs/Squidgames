@@ -18,6 +18,7 @@ import org.squidgames.utils.GameUtils;
 import java.util.Objects;
 
 public class GameStateHandler {
+    private boolean useRandomInterval = false;
     private final SquidGamesPlugin plugin;
     private final PlayerStateHandler playerStateHandler;
     private final SetLightCommand setLightCommand;
@@ -30,6 +31,7 @@ public class GameStateHandler {
         this.setLightCommand = new SetLightCommand(plugin);
         this.currentState = GameState.LOBBY;
         this.isRedLight = false;
+        this.useRandomInterval = plugin.getConfig().getBoolean("useRandomInterval", false);
         updateLightColor();
     }
 
@@ -135,8 +137,17 @@ public class GameStateHandler {
                         GameUtils.fillInventoryWithWool(player, isRedLight);
                     }
                 }
+
+                boolean useRandomInterval = plugin.getConfig().getBoolean("useRandomInterval", false);
+                long interval = useRandomInterval ? (2 + (int) (Math.random() * 5)) * 20 : 100; // 2 to 6 seconds in ticks
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        startRedLightGreenLightGame();
+                    }
+                }.runTaskLater(plugin, interval);
             }
-        }.runTaskTimer(plugin, 0, 100); // 5s
+        }.runTaskLater(plugin, 0); // Initial delay of 0 ticks
     }
     private void giveCyanLeatherOutfit(Player player) {
         ItemStack[] armor = new ItemStack[4];
@@ -262,5 +273,9 @@ public class GameStateHandler {
         double y = plugin.getConfig().getDouble("light.area.corner1.y");
         double z = plugin.getConfig().getDouble("light.area.corner1.z");
         return new Location(Bukkit.getWorld(worldName), x, y, z);
+    }
+    public void setUseRandomInterval(boolean useRandomInterval) {
+        plugin.getConfig().set("useRandomInterval", useRandomInterval);
+        plugin.saveConfig();
     }
 }

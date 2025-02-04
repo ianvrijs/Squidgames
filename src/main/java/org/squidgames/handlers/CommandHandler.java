@@ -46,7 +46,7 @@ public class CommandHandler implements CommandExecutor {
 
     private void handleSetupCommand(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /sq setup <setspawn|setlobby|setarena|setsafezone>");
+            sender.sendMessage(ChatColor.RED + "Usage: /sq setup <setspawn|setlobby|setarena|setsafezone|setrandom>");
             return;
         }
 
@@ -69,6 +69,15 @@ public class CommandHandler implements CommandExecutor {
                     break;
                 case "setlight":
                     new SetLightCommand(plugin).execute((Player) sender);
+                    break;
+                case "setrandom":
+                    if (args.length != 3) {
+                        sender.sendMessage(ChatColor.RED + "Usage: /sq setup setrandom <true/false>");
+                        return;
+                    }
+                    boolean useRandomInterval = Boolean.parseBoolean(args[2]);
+                    gameStateHandler.setUseRandomInterval(useRandomInterval);
+                    sender.sendMessage(ChatColor.GREEN + "Random interval set to " + useRandomInterval);
                     break;
                 default:
                     sender.sendMessage(ChatColor.RED + "Unknown setup action: " + action);
