@@ -1,7 +1,8 @@
 name: SquidGames
 version: 1.0
 main: org.squidgames.SquidGamesPlugin
+api-version: 1.16
 commands:
   sq:
-    description: Main command for SquidGames plugin
-    usage: /<command> [subcommand]
+    description: Main command for SquidGames
+    usage: /<command> <subcommand> [args]
