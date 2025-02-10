@@ -1,5 +1,6 @@
 package org.squidgames.handlers;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -37,8 +38,28 @@ public class CommandHandler implements CommandExecutor {
             case "stop":
                 gameStateHandler.stopGame(sender);
                 break;
+            case "exempt":
+                gameStateHandler.exemptPlayer((Player) sender);
+                break;
             default:
                 sender.sendMessage(ChatColor.RED + "Unknown subcommand: " + subCommand);
+                break;
+            case "remove":
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /sq remove <player>");
+                    return true;
+                }
+                if (!sender.hasPermission("squidgames.admin")) {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+                    return true;
+                }
+                Player target = Bukkit.getPlayer(args[1]);
+                if (target == null) {
+                    sender.sendMessage(ChatColor.RED + "Player not found.");
+                    return true;
+                }
+                gameStateHandler.removePlayerFromGame(target);
+                sender.sendMessage(ChatColor.GREEN + target.getName() + " has been removed from the ongoing match.");
                 break;
         }
         return true;
@@ -46,7 +67,7 @@ public class CommandHandler implements CommandExecutor {
 
     private void handleSetupCommand(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(ChatColor.RED + "Usage: /sq setup <setspawn|setlobby|setarena|setsafezone>");
+            sender.sendMessage(ChatColor.RED + "Usage: /sq setup <setspawn|setlobby|setarena|setsafezone|setrandom>");
             return;
         }
 
@@ -69,6 +90,15 @@ public class CommandHandler implements CommandExecutor {
                     break;
                 case "setlight":
                     new SetLightCommand(plugin).execute((Player) sender);
+                    break;
+                case "setrandom":
+                    if (args.length != 3) {
+                        sender.sendMessage(ChatColor.RED + "Usage: /sq setup setrandom <true/false>");
+                        return;
+                    }
+                    boolean useRandomInterval = Boolean.parseBoolean(args[2]);
+                    gameStateHandler.setUseRandomInterval(useRandomInterval);
+                    sender.sendMessage(ChatColor.GREEN + "Random interval set to " + useRandomInterval);
                     break;
                 default:
                     sender.sendMessage(ChatColor.RED + "Unknown setup action: " + action);

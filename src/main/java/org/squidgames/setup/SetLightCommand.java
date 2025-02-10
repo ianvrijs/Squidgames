@@ -72,12 +72,14 @@ public class SetLightCommand implements Listener {
             double x1 = plugin.getConfig().getDouble("light.area.corner1.x");
             double y1 = plugin.getConfig().getDouble("light.area.corner1.y");
             double z1 = plugin.getConfig().getDouble("light.area.corner1.z");
+            assert worldName1 != null;
             corner1 = new Location(Bukkit.getWorld(worldName1), x1, y1, z1);
 
             String worldName2 = plugin.getConfig().getString("light.area.corner2.world");
             double x2 = plugin.getConfig().getDouble("light.area.corner2.x");
             double y2 = plugin.getConfig().getDouble("light.area.corner2.y");
             double z2 = plugin.getConfig().getDouble("light.area.corner2.z");
+            assert worldName2 != null;
             corner2 = new Location(Bukkit.getWorld(worldName2), x2, y2, z2);
         }
     }
