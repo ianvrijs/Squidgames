@@ -10,7 +10,7 @@ import java.util.List;
 
 public class CommandTabCompleter implements TabCompleter {
 
-    private static final List<String> SUB_COMMANDS = Arrays.asList("setup", "start", "stop");
+    private static final List<String> SUB_COMMANDS = Arrays.asList("setup", "start", "stop", "exempt", "remove");
     private static final List<String> SETUP_COMMANDS = Arrays.asList("setspawn", "setlobby", "setarena", "setsafezone", "setlight", "setrandom");
     private static final List<String> TRUE_FALSE = Arrays.asList("true", "false");
 

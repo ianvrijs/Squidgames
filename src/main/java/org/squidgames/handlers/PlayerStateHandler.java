@@ -9,6 +9,8 @@ import java.util.Set;
 public class PlayerStateHandler {
     private final Set<Player> deadPlayers = new HashSet<>();
     private final Set<Player> safePlayers = new LinkedHashSet<>();
+    private final Set<Player> exemptPlayers = new HashSet<>();
+
 
     public void markPlayerAsDead(Player player) {
         deadPlayers.add(player);
@@ -25,7 +27,6 @@ public class PlayerStateHandler {
     public boolean isPlayerSafe(Player player) {
         return safePlayers.contains(player);
     }
-
     public void resetPlayerStates() {
         deadPlayers.clear();
         safePlayers.clear();
@@ -34,4 +35,16 @@ public class PlayerStateHandler {
     public Set<Player> getSafePlayers() {
         return safePlayers;
     }
+
+    public void markPlayerAsExempt(Player player) {
+        exemptPlayers.add(player);
+    }
+    public void unmarkPlayerAsExempt(Player player) {
+        exemptPlayers.remove(player);
+    }
+
+    public boolean isPlayerExempt(Player player) {
+        return exemptPlayers.contains(player);
+    }
+
 }

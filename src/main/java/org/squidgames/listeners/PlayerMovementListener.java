@@ -33,6 +33,10 @@ public class PlayerMovementListener implements Listener {
         if (gameStateHandler.getCurrentState() != GameState.PLAYING) {
             return;
         }
+        Player player = event.getPlayer();
+        if (!gameStateHandler.getQueuedPlayers().contains(player)) {
+            return;
+        }
         Location to = event.getTo();
         Location from = event.getFrom();
 
@@ -42,7 +46,6 @@ public class PlayerMovementListener implements Listener {
         }
 
         GameState currentState = gameStateHandler.getCurrentState();
-        Player player = event.getPlayer();
 
         if (currentState == GameState.PLAYING && gameStateHandler.getPlayerStateHandler().isPlayerSafe(player)) {
             if (!AreaUtils.isInsideArea(to, "safezone", plugin.getConfig())) {

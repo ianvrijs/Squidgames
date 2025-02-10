@@ -1,5 +1,6 @@
 package org.squidgames.handlers;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -37,8 +38,28 @@ public class CommandHandler implements CommandExecutor {
             case "stop":
                 gameStateHandler.stopGame(sender);
                 break;
+            case "exempt":
+                gameStateHandler.exemptPlayer((Player) sender);
+                break;
             default:
                 sender.sendMessage(ChatColor.RED + "Unknown subcommand: " + subCommand);
+                break;
+            case "remove":
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.RED + "Usage: /sq remove <player>");
+                    return true;
+                }
+                if (!sender.hasPermission("squidgames.admin")) {
+                    sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+                    return true;
+                }
+                Player target = Bukkit.getPlayer(args[1]);
+                if (target == null) {
+                    sender.sendMessage(ChatColor.RED + "Player not found.");
+                    return true;
+                }
+                gameStateHandler.removePlayerFromGame(target);
+                sender.sendMessage(ChatColor.GREEN + target.getName() + " has been removed from the ongoing match.");
                 break;
         }
         return true;

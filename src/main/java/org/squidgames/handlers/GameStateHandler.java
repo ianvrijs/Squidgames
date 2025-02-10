@@ -15,15 +15,18 @@ import org.squidgames.SquidGamesPlugin;
 import org.squidgames.setup.SetLightCommand;
 import org.squidgames.utils.GameUtils;
 
-import java.util.Objects;
+import java.util.*;
 
 public class GameStateHandler {
-    private boolean useRandomInterval = false;
+    private final Map<UUID, Long> lastActivityTime = new HashMap<>();
+    private static final long AFK_TIMEOUT = 3 * 60 * 1000; // 3 mins in ms
+
     private final SquidGamesPlugin plugin;
     private final PlayerStateHandler playerStateHandler;
     private final SetLightCommand setLightCommand;
     private GameState currentState;
     private boolean isRedLight;
+    private final List<Player> queuedPlayers = new ArrayList<>();
 
     public GameStateHandler(SquidGamesPlugin plugin) {
         this.plugin = plugin;
@@ -31,40 +34,40 @@ public class GameStateHandler {
         this.setLightCommand = new SetLightCommand(plugin);
         this.currentState = GameState.LOBBY;
         this.isRedLight = false;
-        this.useRandomInterval = plugin.getConfig().getBoolean("useRandomInterval", false);
         updateLightColor();
     }
 
     public void startGame(CommandSender sender) {
-        if (getArenaLocation() == null) {
-            sender.sendMessage(ChatColor.RED + "Arena location is not set.");
-            return;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!playerStateHandler.isPlayerExempt(player)) {
+                queuedPlayers.add(player);
+            }
         }
-        if (getSpawnLocation() == null) {
-            sender.sendMessage(ChatColor.RED + "Spawn location is not set.");
-            return;
-        }
-        if (getLobbyLocation() == null) {
-            sender.sendMessage(ChatColor.RED + "Lobby location is not set.");
-            return;
-        }
-        if (Bukkit.getOnlinePlayers().size() < 2) {
+        if (queuedPlayers.size() < 2) {
             sender.sendMessage(ChatColor.RED + "Not enough players to start the game.");
             return;
-        }
-        if (currentState == GameState.PLAYING) {
+        } else if (getArenaLocation() == null) {
+            sender.sendMessage(ChatColor.RED + "Arena location is not set.");
+            return;
+        } else if (getSpawnLocation() == null) {
+            sender.sendMessage(ChatColor.RED + "Spawn location is not set.");
+            return;
+        } else if (getLobbyLocation() == null) {
+            sender.sendMessage(ChatColor.RED + "Lobby location is not set.");
+            return;
+        } else if (currentState == GameState.PLAYING) {
             sender.sendMessage(ChatColor.RED + "Game is already running.");
             return;
         }
         sender.sendMessage(ChatColor.GREEN + "Game started!");
         currentState = GameState.STARTING;
-        updateLightColor();
-        GameUtils.startCountdown(plugin, 5, () -> {
+        updateLightColor(); //briefly change lights to yellow to indicate starting state
+        GameUtils.startCountdown(plugin, 5, queuedPlayers, () -> {
             currentState = GameState.PLAYING;
-            updateLightColor();
+            updateLightColor(); //light to green
             playerStateHandler.resetPlayerStates();
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                Location spawnLocation = getSpawnLocation();
+            Location spawnLocation = getSpawnLocation();
+            for (Player player : queuedPlayers) {
                 if (spawnLocation != null) {
                     player.teleport(spawnLocation);
                 }
@@ -77,20 +80,21 @@ public class GameStateHandler {
 
     public void stopGame(CommandSender sender) {
         if (currentState != GameState.PLAYING) {
-            Bukkit.getLogger().info("Game is not running.");
+            sender.sendMessage(ChatColor.RED + "No game running.");
             return;
         }
         sender.sendMessage(ChatColor.RED + "Game stopped!");
         currentState = GameState.STOPPED;
         updateLightColor();
         plugin.getPlayerMovementListener().removeAllCorpses();
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        Location lobbyLocation = getLobbyLocation();
+        for (Player player : queuedPlayers) {
             player.getInventory().clear();
-            Location lobbyLocation = getLobbyLocation();
             if (lobbyLocation != null) {
                 player.teleport(lobbyLocation);
             }
         }
+        queuedPlayers.clear(); //empty queued players list
         Bukkit.getLogger().info("Game state set to STOPPED.");
     }
 
@@ -106,10 +110,7 @@ public class GameStateHandler {
         }
     }
 
-    public GameState getCurrentState() {
-        return currentState;
-    }
-
+    public GameState getCurrentState() { return currentState; }
     public boolean isRedLight() {
         return isRedLight;
     }
@@ -127,16 +128,19 @@ public class GameStateHandler {
                 String message = isRedLight ? ChatColor.RED + "Red Light!" : ChatColor.GREEN + "Green Light!";
                 updateLightColor();
 
+                //send red/green light message to enqueued players
+                for (Player player : queuedPlayers) {
+                    if (!playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
+                        player.sendMessage(message);
+
+                    }
+                }
+                //keep track of time to calc/ add player reaction time
                 if (isRedLight) {
                     plugin.getPlayerMovementListener().setRedLightStartTime(System.currentTimeMillis());
                 }
 
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    if (!playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
-                        player.sendMessage(message);
-                        GameUtils.fillInventoryWithWool(player, isRedLight);
-                    }
-                }
+                GameUtils.fillInventoryWithWool(queuedPlayers, isRedLight, playerStateHandler);
 
                 boolean useRandomInterval = plugin.getConfig().getBoolean("useRandomInterval", false);
                 long interval = useRandomInterval ? (2 + (int) (Math.random() * 5)) * 20 : 100; // 2 to 6 seconds in ticks
@@ -215,20 +219,20 @@ public class GameStateHandler {
 
         player.getInventory().clear();
         playerStateHandler.markPlayerAsSafe(player);
-        player.sendMessage(ChatColor.GREEN + "You are safe!");
+        player.sendMessage(ChatColor.GREEN + "You're safe!");
         checkGameEnd();
     }
 
     private void checkGameEnd() {
         boolean allSafeOrEliminated = true;
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        for (Player player : queuedPlayers) {
             if (!playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
                 allSafeOrEliminated = false;
                 break;
             }
         }
         if (allSafeOrEliminated) {
-            GameUtils.displayEndGameResults(plugin, playerStateHandler);
+            GameUtils.displayEndGameResults(playerStateHandler, queuedPlayers);
 
             new BukkitRunnable() {
                 @Override
@@ -277,5 +281,40 @@ public class GameStateHandler {
     public void setUseRandomInterval(boolean useRandomInterval) {
         plugin.getConfig().set("useRandomInterval", useRandomInterval);
         plugin.saveConfig();
+    }
+    public void updatePlayerActivity(Player player) {
+        lastActivityTime.put(player.getUniqueId(), System.currentTimeMillis());
+    }
+
+    public void checkForAfkPlayers() {
+        long currentTime = System.currentTimeMillis();
+        for (Player player : queuedPlayers) {
+            if (currentState == GameState.PLAYING && lastActivityTime.containsKey(player.getUniqueId())) {
+                long lastActivity = lastActivityTime.get(player.getUniqueId());
+                if (currentTime - lastActivity > AFK_TIMEOUT) {
+                    playerDied(player);
+                    player.sendMessage(ChatColor.RED + "You have been removed from the game due to inactivity.");
+                }
+            }
+        }
+    }
+    public void exemptPlayer(Player player) {
+        if (playerStateHandler.isPlayerExempt(player)) {
+            playerStateHandler.unmarkPlayerAsExempt(player);
+            player.sendMessage(ChatColor.GREEN + "You are no longer exempt from match making.");
+        } else {
+            playerStateHandler.markPlayerAsExempt(player);
+            player.sendMessage(ChatColor.GREEN + "You have been exempted from match making.");
+        }
+    }
+    public void removePlayerFromGame(Player player) {
+        playerStateHandler.markPlayerAsDead(player);
+        player.getInventory().clear();
+        player.teleport(Objects.requireNonNull(getLobbyLocation()));
+        player.sendMessage(ChatColor.RED + "You have been removed from the game.");
+        checkGameEnd();
+    }
+    public List<Player> getQueuedPlayers() {
+        return queuedPlayers;
     }
 }

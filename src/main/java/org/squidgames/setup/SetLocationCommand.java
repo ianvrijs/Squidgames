@@ -23,12 +23,13 @@ public class SetLocationCommand {
 
         Location location = player.getLocation();
         String path = locationType.toLowerCase();
-        //TODO round the values to avoid floating point errors
 
         plugin.getConfig().set(path + ".world", Objects.requireNonNull(location.getWorld()).getName());
-        plugin.getConfig().set(path + ".x", location.getX());
-        plugin.getConfig().set(path + ".y", location.getY());
-        plugin.getConfig().set(path + ".z", location.getZ());
+        plugin.getConfig().set(path + ".x", Math.round(location.getX()));
+        plugin.getConfig().set(path + ".y", Math.round(location.getY()));
+        plugin.getConfig().set(path + ".z", Math.round(location.getZ()));
+        plugin.getConfig().set(path + ".yaw", Math.round(location.getYaw()));
+        plugin.getConfig().set(path + ".pitch", Math.round(location.getPitch()));
         plugin.saveConfig();
 
         sender.sendMessage(ChatColor.GREEN + "Set " + locationType + " location to your current position.");
