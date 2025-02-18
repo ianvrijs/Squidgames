@@ -22,8 +22,8 @@ This is a Minecraft plugin for a Squid Games-inspired game mode. The plugin is b
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/ianvrijs/squidgames-plugin.git
-    cd squidgames-plugin
+    git clone https://github.com/ianvrijs/Squidgames.git
+    cd squidgames
     ```
 
 2. Build the plugin using Maven:
@@ -36,7 +36,7 @@ This is a Minecraft plugin for a Squid Games-inspired game mode. The plugin is b
 4. Start your Minecraft server.
 
 ## Usage and configuration
- - Outline the safezone, lobby and light areas using the /sq setup sub-commands
- - Set the spawn area using the /sq setspawn command
- - Start the game using the /sq start command
+ - Outline the safezone, lobby and light areas using the ``/sq setup`` sub-commands
+ - Set the spawn area using the ``/sq setspawn`` command
+ - Start the game using the ``/sq start`` command
 
