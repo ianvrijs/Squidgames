@@ -41,6 +41,12 @@ public class CommandHandler implements CommandExecutor {
             case "exempt":
                 gameStateHandler.exemptPlayer((Player) sender);
                 break;
+            case "clearstats":
+                if (sender instanceof Player) {
+                    plugin.getStatsManager().clearStats();
+                    sender.sendMessage(ChatColor.GREEN + "All player stats have been cleared.");
+                }
+                break;
             default:
                 sender.sendMessage(ChatColor.RED + "Unknown subcommand: " + subCommand);
                 break;
@@ -82,6 +88,23 @@ public class CommandHandler implements CommandExecutor {
                 case "setlobby":
                     setLocationCommand.execute(sender, "lobby");
                     break;
+                case "setinterval":
+                    if (args.length != 4) {
+                        sender.sendMessage(ChatColor.RED + "Usage: /sq setup setinterval <min> <max>");
+                        return;
+                    }
+                    try {
+                        int minSeconds = Integer.parseInt(args[2]);
+                        int maxSeconds = Integer.parseInt(args[3]);
+                        plugin.getConfig().set("interval.min", minSeconds);
+                        plugin.getConfig().set("interval.max", maxSeconds);
+                        plugin.saveConfig();
+                        sender.sendMessage(ChatColor.GREEN + "Interval updated: min = " + minSeconds + " seconds, max = " + maxSeconds + " seconds.");
+                    } catch (NumberFormatException e) {
+                        sender.sendMessage(ChatColor.RED + "Invalid number format. Please enter valid integers for min and max seconds.");
+                    }
+                    break;
+
                 case "setarena":
                     setAreaCommand.execute(sender, "arena");
                     break;

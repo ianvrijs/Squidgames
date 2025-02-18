@@ -66,7 +66,6 @@ public class PlayerMovementListener implements Listener {
                     if (currentTime - redLightStartTime > 500) { // waiting .5s to give the player some time to react
                         spawnCorpse(player.getLocation(), player);
                         gameStateHandler.playerDied(player);
-                        player.sendMessage(ChatColor.RED + "You moved.. RIP");
                     }
                     return;
                 }
