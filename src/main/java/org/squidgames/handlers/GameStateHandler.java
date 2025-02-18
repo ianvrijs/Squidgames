@@ -106,11 +106,12 @@ public class GameStateHandler {
             playerStateHandler.markPlayerAsDead(player);
             player.getInventory().clear();
             Location lobbyLocation = getLobbyLocation();
+            //TODO exempt afk/ manually removed players from getting shown death messages
             handlePlayerElimination(player);
             if (lobbyLocation != null) {
                 player.teleport(lobbyLocation);
             }
-            checkGameEnd();
+//            checkGameEnd();
         }
     }
 
@@ -228,28 +229,30 @@ public class GameStateHandler {
         if (playerStateHandler.isPlayerSafe(player)) {
             return;
         }
-
         player.getInventory().clear();
         playerStateHandler.markPlayerAsSafe(player);
         handlePlayerFinish(player);
         checkGameEnd();
     }
-
-    public void checkGameEnd() {
+    private void checkGameEnd() {
         boolean allSafeOrEliminated = true;
+        Bukkit.getLogger().info("Checking if game should end...");
         for (Player player : queuedPlayers) {
+            Bukkit.getLogger().info("Player: " + player.getName() + ", Safe: " + playerStateHandler.isPlayerSafe(player) + ", Dead: " + playerStateHandler.isPlayerDead(player));
             if (!playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
                 allSafeOrEliminated = false;
                 break;
             }
         }
         if (allSafeOrEliminated) {
+            Bukkit.getLogger().info("All players are either safe or eliminated. Ending game...");
             GameUtils.displayEndGameResults(playerStateHandler, queuedPlayers);
             List<Player> safePlayers = new ArrayList<>(playerStateHandler.getSafePlayers());
             plugin.getStatsManager().saveAllQueuedPlayers(queuedPlayers);
             for (Player player : queuedPlayers) {
                 boolean isWinner = safePlayers.contains(player);
                 int rank = safePlayers.indexOf(player) + 1;
+                Bukkit.getLogger().info("Updating stats for player: " + player.getName() + ", Winner: " + isWinner + ", Rank: " + rank);
                 plugin.getStatsManager().updatePlayerStats(player, isWinner, rank);
                 plugin.getScoreboardManager().setupScoreboard(player);
             }
@@ -258,10 +261,13 @@ public class GameStateHandler {
                 public void run() {
                     Location lobbyLocation = getLobbyLocation();
                     if (lobbyLocation != null) {
+                        Bukkit.getLogger().info("Stopping game and teleporting players to lobby...");
                         stopGame(Bukkit.getConsoleSender());
                     }
                 }
             }.runTaskLater(plugin, 100); // 5s
+        } else {
+            Bukkit.getLogger().info("Not all players are safe or eliminated. Game continues...");
         }
     }
 
@@ -330,11 +336,9 @@ public class GameStateHandler {
     }
 
     public void removePlayerFromGame(Player player) {
-        playerStateHandler.markPlayerAsDead(player);
         player.getInventory().clear();
         player.teleport(Objects.requireNonNull(getLobbyLocation()));
-        player.sendMessage(ChatColor.RED + "You have been removed from the game.");
-        checkGameEnd();
+//        player.sendMessage(ChatColor.RED + "You have been removed from the game.");
     }
 
     public List<Player> getQueuedPlayers() {
@@ -346,6 +350,7 @@ public class GameStateHandler {
         Bukkit.broadcastMessage(deathMessage);
         player.sendMessage(ChatColor.RED + "You moved! RIP..");
         removePlayerFromGame(player);
+        checkGameEnd();
     }
 
     public void handlePlayerFinish(Player player) {
