@@ -236,23 +236,19 @@ public class GameStateHandler {
     }
     private void checkGameEnd() {
         boolean allSafeOrEliminated = true;
-        Bukkit.getLogger().info("Checking if game should end...");
         for (Player player : queuedPlayers) {
-            Bukkit.getLogger().info("Player: " + player.getName() + ", Safe: " + playerStateHandler.isPlayerSafe(player) + ", Dead: " + playerStateHandler.isPlayerDead(player));
             if (!playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
                 allSafeOrEliminated = false;
                 break;
             }
         }
         if (allSafeOrEliminated) {
-            Bukkit.getLogger().info("All players are either safe or eliminated. Ending game...");
             GameUtils.displayEndGameResults(playerStateHandler, queuedPlayers);
             List<Player> safePlayers = new ArrayList<>(playerStateHandler.getSafePlayers());
             plugin.getStatsManager().saveAllQueuedPlayers(queuedPlayers);
             for (Player player : queuedPlayers) {
                 boolean isWinner = safePlayers.contains(player);
                 int rank = safePlayers.indexOf(player) + 1;
-                Bukkit.getLogger().info("Updating stats for player: " + player.getName() + ", Winner: " + isWinner + ", Rank: " + rank);
                 plugin.getStatsManager().updatePlayerStats(player, isWinner, rank);
                 plugin.getScoreboardManager().setupScoreboard(player);
             }
@@ -261,15 +257,12 @@ public class GameStateHandler {
                 public void run() {
                     Location lobbyLocation = getLobbyLocation();
                     if (lobbyLocation != null) {
-                        Bukkit.getLogger().info("Stopping game and teleporting players to lobby...");
                         stopGame(Bukkit.getConsoleSender());
                     }
                 }
             }.runTaskLater(plugin, 100); // 5s
-        } else {
-            Bukkit.getLogger().info("Not all players are safe or eliminated. Game continues...");
-        }
-    }
+        } }
+
 
     private void updateLightColor() {
         Location lightLocation = getLightLocation();
