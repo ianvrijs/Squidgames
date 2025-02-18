@@ -106,11 +106,12 @@ public class GameStateHandler {
             playerStateHandler.markPlayerAsDead(player);
             player.getInventory().clear();
             Location lobbyLocation = getLobbyLocation();
+            //TODO exempt afk/ manually removed players from getting shown death messages
             handlePlayerElimination(player);
             if (lobbyLocation != null) {
                 player.teleport(lobbyLocation);
             }
-            checkGameEnd();
+//            checkGameEnd();
         }
     }
 
@@ -228,14 +229,12 @@ public class GameStateHandler {
         if (playerStateHandler.isPlayerSafe(player)) {
             return;
         }
-
         player.getInventory().clear();
         playerStateHandler.markPlayerAsSafe(player);
         handlePlayerFinish(player);
         checkGameEnd();
     }
-
-    public void checkGameEnd() {
+    private void checkGameEnd() {
         boolean allSafeOrEliminated = true;
         for (Player player : queuedPlayers) {
             if (!playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
@@ -262,8 +261,8 @@ public class GameStateHandler {
                     }
                 }
             }.runTaskLater(plugin, 100); // 5s
-        }
-    }
+        } }
+
 
     private void updateLightColor() {
         Location lightLocation = getLightLocation();
@@ -330,11 +329,9 @@ public class GameStateHandler {
     }
 
     public void removePlayerFromGame(Player player) {
-        playerStateHandler.markPlayerAsDead(player);
         player.getInventory().clear();
         player.teleport(Objects.requireNonNull(getLobbyLocation()));
-        player.sendMessage(ChatColor.RED + "You have been removed from the game.");
-        checkGameEnd();
+//        player.sendMessage(ChatColor.RED + "You have been removed from the game.");
     }
 
     public List<Player> getQueuedPlayers() {
@@ -346,6 +343,7 @@ public class GameStateHandler {
         Bukkit.broadcastMessage(deathMessage);
         player.sendMessage(ChatColor.RED + "You moved! RIP..");
         removePlayerFromGame(player);
+        checkGameEnd();
     }
 
     public void handlePlayerFinish(Player player) {
