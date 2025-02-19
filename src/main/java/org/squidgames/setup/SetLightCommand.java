@@ -9,8 +9,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
 import org.squidgames.SquidGamesPlugin;
-
+import org.bukkit.inventory.meta.ItemMeta;
 import java.util.Objects;
 
 public class SetLightCommand implements Listener {
@@ -26,26 +27,44 @@ public class SetLightCommand implements Listener {
     }
 
     public void execute(Player player) {
-        player.sendMessage(ChatColor.GREEN + "Light setup mode enabled. Right-click two opposite corners to select the area.");
+        giveSelectionTool(player);
+        player.sendMessage(ChatColor.GREEN + "You have been given a selection tool. Right-click white wool blocks with it to mark out an area.");
     }
-
+    public void giveSelectionTool(Player player) {
+        ItemStack selectionTool = new ItemStack(Material.STICK);
+        ItemMeta meta = selectionTool.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GREEN + "Selection Tool");
+            selectionTool.setItemMeta(meta);
+        }
+        player.getInventory().addItem(selectionTool);
+    }
     @org.bukkit.event.EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            Block block = event.getClickedBlock();
-            if (block != null && block.getType() == Material.WHITE_WOOL) {
-                long currentTime = System.currentTimeMillis();
-                if (corner1 == null) {
-                    corner1 = block.getLocation();
-                    lastClickTime = currentTime;
-                    event.getPlayer().sendMessage(ChatColor.GREEN + "First corner selected: " + corner1);
-                } else if (corner2 == null && (currentTime - lastClickTime) > 500) { // 500ms delay
-                    corner2 = block.getLocation();
-                    event.getPlayer().sendMessage(ChatColor.GREEN + "Second corner selected: " + corner2);
-                    saveSelectedArea();
-                    event.getPlayer().sendMessage(ChatColor.GREEN + "Light setup mode disabled. Selected area saved to config.");
-                    setLightColor(Material.RED_WOOL);
-                    PlayerInteractEvent.getHandlerList().unregister(this);
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item.getType() == Material.STICK && item.getItemMeta() != null && ChatColor.stripColor(item.getItemMeta().getDisplayName()).equals("Selection Tool")) {
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                Block block = event.getClickedBlock();
+                if (block != null) {
+                    long currentTime = System.currentTimeMillis();
+                    if (corner1 == null) {
+                        corner1 = block.getLocation();
+                        lastClickTime = currentTime;
+                        player.sendMessage(ChatColor.GREEN + "First corner selected: " + corner1);
+                    } else if (corner2 == null && (currentTime - lastClickTime) > 500) { // 500ms delay
+                        corner2 = block.getLocation();
+                        player.sendMessage(ChatColor.GREEN + "Second corner selected: " + corner2);
+                        saveSelectedArea();
+                        player.sendMessage(ChatColor.GREEN + "Light setup mode disabled. Selected area saved to config.");
+                        setLightColor(Material.RED_WOOL);
+                        PlayerInteractEvent.getHandlerList().unregister(this);
+                    } else if (corner1 != null && corner2 != null) { // reset
+                        corner1 = block.getLocation();
+                        corner2 = null;
+                        lastClickTime = currentTime;
+                        player.sendMessage(ChatColor.GREEN + "First corner re-selected: " + corner1);
+                    }
                 }
             }
         }

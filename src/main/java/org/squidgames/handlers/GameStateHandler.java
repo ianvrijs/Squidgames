@@ -41,6 +41,9 @@ public class GameStateHandler {
     }
 
     public void startGame(CommandSender sender) {
+        if (!isConfigValid(sender)) {
+            return;
+        }
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (!playerStateHandler.isPlayerExempt(player)) {
                 queuedPlayers.add(player);
@@ -197,28 +200,38 @@ public class GameStateHandler {
         return new Location(Bukkit.getWorld(worldName), x, y, z);
     }
 
-    private Location getLobbyLocation() {
+    public Location getLobbyLocation() {
         if (!plugin.getConfig().contains("lobby")) {
             return null;
         }
         String worldName = plugin.getConfig().getString("lobby.world");
+        if (worldName == null) {
+            plugin.getLogger().severe("Lobby world name is not set in the config.");
+            return null;
+        }
         double x = plugin.getConfig().getDouble("lobby.x");
         double y = plugin.getConfig().getDouble("lobby.y");
         double z = plugin.getConfig().getDouble("lobby.z");
-        assert worldName != null;
-        return new Location(Bukkit.getWorld(worldName), x, y, z);
+        float yaw = (float) plugin.getConfig().getDouble("lobby.yaw");
+        float pitch = (float) plugin.getConfig().getDouble("lobby.pitch");
+        return new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
     }
 
-    private Location getSpawnLocation() {
+    public Location getSpawnLocation() {
         if (!plugin.getConfig().contains("spawn")) {
             return null;
         }
         String worldName = plugin.getConfig().getString("spawn.world");
+        if (worldName == null) {
+            plugin.getLogger().severe("Spawn world name is not set in the config.");
+            return null;
+        }
         double x = plugin.getConfig().getDouble("spawn.x");
         double y = plugin.getConfig().getDouble("spawn.y");
         double z = plugin.getConfig().getDouble("spawn.z");
-        assert worldName != null;
-        return new Location(Bukkit.getWorld(worldName), x, y, z);
+        float yaw = (float) plugin.getConfig().getDouble("spawn.yaw");
+        float pitch = (float) plugin.getConfig().getDouble("spawn.pitch");
+        return new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
     }
 
     public PlayerStateHandler getPlayerStateHandler() {
@@ -350,5 +363,28 @@ public class GameStateHandler {
         String finishMessage = ChatColor.GREEN + "🏆 " + player.getName();
         Bukkit.broadcastMessage(finishMessage);
         player.sendMessage(ChatColor.GREEN + "You made it!");
+    }
+    private boolean isConfigValid(CommandSender sender) {
+        if (!plugin.getConfig().contains("arena.corner1") || !plugin.getConfig().contains("arena.corner2")) {
+            sender.sendMessage(ChatColor.RED + "Arena corners are not set in the config. | </sq setup setarena>");
+            return false;
+        }
+        if (!plugin.getConfig().contains("safezone.corner1") || !plugin.getConfig().contains("safezone.corner2")) {
+            sender.sendMessage(ChatColor.RED + "Safezone corners are not set in the config. | </sq setup setsafezone>");
+            return false;
+        }
+        if (!plugin.getConfig().contains("lobby")) {
+            sender.sendMessage(ChatColor.RED + "Lobby location is not set in the config.| </sq setup setlobby>");
+            return false;
+        }
+        if (!plugin.getConfig().contains("spawn")) {
+            sender.sendMessage(ChatColor.RED + "Spawn location is not set in the config. | </sq setup setspawn>");
+            return false;
+        }
+        if (!plugin.getConfig().contains("light.area.corner1") || !plugin.getConfig().contains("light.area.corner2")) {
+            sender.sendMessage(ChatColor.RED + "Light area corners are not set in the config. | </sq setup setlight>");
+            return false;
+        }
+        return true;
     }
 }
