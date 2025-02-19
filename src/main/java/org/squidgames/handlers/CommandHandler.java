@@ -6,6 +6,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.squidgames.GameState;
 import org.squidgames.SquidGamesPlugin;
 import org.squidgames.setup.SetAreaCommand;
 import org.squidgames.setup.SetLightCommand;
@@ -64,9 +65,15 @@ public class CommandHandler implements CommandExecutor {
                     sender.sendMessage(ChatColor.RED + "Player not found.");
                     return true;
                 }
-                gameStateHandler.removePlayerFromGame(target);
-                sender.sendMessage(ChatColor.GREEN + target.getName() + " has been removed from the ongoing match.");
-                break;
+                if(gameStateHandler.getCurrentState() == GameState.PLAYING) {
+                    gameStateHandler.removePlayerFromGame(target);
+                    sender.sendMessage(ChatColor.GREEN + target.getName() + " has been removed from the ongoing match.");
+                    break;
+                } else {
+                    sender.sendMessage(ChatColor.RED + "There is no ongoing game to remove players from...");
+                    break;
+                }
+
         }
         return true;
     }
@@ -83,7 +90,7 @@ public class CommandHandler implements CommandExecutor {
         if (sender instanceof Player) {
             switch (action) {
                 case "setspawn":
-                    setAreaCommand.execute(sender, "spawn");
+                    setLocationCommand.execute(sender, "spawn");
                     break;
                 case "setlobby":
                     setLocationCommand.execute(sender, "lobby");
