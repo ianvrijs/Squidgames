@@ -387,4 +387,7 @@ public class GameStateHandler {
         }
         return true;
     }
+    public void removeQueuedPlayer(Player player) {
+        queuedPlayers.remove(player);
+    }
 }
