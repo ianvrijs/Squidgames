@@ -41,6 +41,9 @@ public class PlayerJoinLeaveListener implements Listener {
         if (gameStateHandler.getCurrentState() == GameState.PLAYING) {
             gameStateHandler.playerDied(event.getPlayer());
         }
+        if (gameStateHandler.getQueuedPlayers().contains(event.getPlayer())) {
+            gameStateHandler.removeQueuedPlayer(event.getPlayer());
+        }
     }
 
     private void updatePlayerTabColor(Player player) {

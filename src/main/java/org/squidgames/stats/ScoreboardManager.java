@@ -32,7 +32,6 @@ public class ScoreboardManager {
     }
 
     public void updateScoreboard(Player player) {
-        logger.info("Updating scoreboard for player: " + player.getName());
         Scoreboard scoreboard = player.getScoreboard();
         Objective objective = scoreboard.getObjective("stats");
         if (objective == null) {
