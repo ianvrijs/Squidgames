@@ -1,8 +1,14 @@
 name: SquidGames
-version: 1.0
+version: 1.1
 main: org.squidgames.SquidGamesPlugin
 api-version: 1.16
 commands:
   sq:
     description: Main command for SquidGames
     usage: /<command> <subcommand> [args]
+    permission: squidgames.admin
+    permission-message: You do not have permission to use this command.
+permissions:
+  squidgames.admin:
+    description: Allows access to all SquidGames commands
+    default: op

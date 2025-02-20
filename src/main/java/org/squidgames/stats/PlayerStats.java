@@ -19,8 +19,6 @@ public class PlayerStats {
 
     public void addGamePlayed() {
         this.gamesPlayed++;
-        Bukkit.getLogger().info("Games played incremented. Current count: " + gamesPlayed);
-
     }
 
     public int getWins() {

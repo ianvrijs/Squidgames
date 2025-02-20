@@ -51,19 +51,20 @@ public class SetLightCommand implements Listener {
                     if (corner1 == null) {
                         corner1 = block.getLocation();
                         lastClickTime = currentTime;
-                        player.sendMessage(ChatColor.GREEN + "First corner selected: " + corner1);
+                        player.sendMessage(ChatColor.GREEN + "First corner selected");
                     } else if (corner2 == null && (currentTime - lastClickTime) > 500) { // 500ms delay
                         corner2 = block.getLocation();
-                        player.sendMessage(ChatColor.GREEN + "Second corner selected: " + corner2);
+                        player.sendMessage(ChatColor.GREEN + "Second corner selected");
                         saveSelectedArea();
                         player.sendMessage(ChatColor.GREEN + "Light setup mode disabled. Selected area saved to config.");
                         setLightColor(Material.RED_WOOL);
+                        player.getInventory().remove(item);
                         PlayerInteractEvent.getHandlerList().unregister(this);
                     } else if (corner1 != null && corner2 != null) { // reset
                         corner1 = block.getLocation();
                         corner2 = null;
                         lastClickTime = currentTime;
-                        player.sendMessage(ChatColor.GREEN + "First corner re-selected: " + corner1);
+                        player.sendMessage(ChatColor.GREEN + "First corner re-selected");
                     }
                 }
             }

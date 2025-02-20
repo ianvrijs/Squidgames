@@ -17,6 +17,9 @@ import java.util.Objects;
 public class SquidGamesPlugin extends JavaPlugin {
     private GameStateHandler gameStateHandler;
     private PlayerMovementListener playerMovementListener;
+    private PlayerActivityListener playerActivityListener;
+    private PlayerJoinLeaveListener playerJoinLeaveListener;
+    private PlayerInventoryListener playerInventoryListener;
     private StatsManager statsManager;
     private ScoreboardManager scoreboardManager;
     private TabManager tabManager;
@@ -31,17 +34,16 @@ public class SquidGamesPlugin extends JavaPlugin {
         scoreboardManager = new ScoreboardManager(statsManager);
         tabManager = new TabManager(this);
 
-
-
-
         playerMovementListener = new PlayerMovementListener(this, gameStateHandler);
+        playerActivityListener = new PlayerActivityListener(gameStateHandler);
+        playerInventoryListener = new PlayerInventoryListener();
+        playerJoinLeaveListener = new PlayerJoinLeaveListener(gameStateHandler, scoreboardManager, tabManager);
+
+        getServer().getPluginManager().registerEvents(playerJoinLeaveListener, this);
+
+
         Objects.requireNonNull(this.getCommand("sq")).setExecutor(new CommandHandler(this, gameStateHandler));
         Objects.requireNonNull(getCommand("sq")).setTabCompleter(new CommandTabCompleter());
-
-        getServer().getPluginManager().registerEvents(new PlayerJoinLeaveListener(gameStateHandler, scoreboardManager, tabManager), this);
-        getServer().getPluginManager().registerEvents(new PlayerInventoryListener(), this);
-        getServer().getPluginManager().registerEvents(playerMovementListener, this);
-        getServer().getPluginManager().registerEvents(new PlayerActivityListener(gameStateHandler), this);
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -57,6 +59,15 @@ public class SquidGamesPlugin extends JavaPlugin {
     }
     public PlayerMovementListener getPlayerMovementListener() {
         return playerMovementListener;
+    }  public PlayerActivityListener getPlayerActivityListener() {
+        return playerActivityListener;
     }
+    public PlayerJoinLeaveListener getPlayerJoinLeaveListener() {
+        return playerJoinLeaveListener;
+    }
+    public PlayerInventoryListener getPlayerInventoryListener() {
+        return playerInventoryListener;
+    }
+
 
 }

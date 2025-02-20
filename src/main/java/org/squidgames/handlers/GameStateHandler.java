@@ -7,11 +7,17 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.squidgames.GameState;
 import org.squidgames.SquidGamesPlugin;
+import org.squidgames.TabManager;
 import org.squidgames.listeners.PlayerJoinLeaveListener;
 import org.squidgames.setup.SetLightCommand;
 import org.squidgames.utils.GameUtils;
@@ -27,6 +33,7 @@ public class GameStateHandler {
     private final SquidGamesPlugin plugin;
     private final PlayerStateHandler playerStateHandler;
     private final SetLightCommand setLightCommand;
+    private final TabManager tabManager;
     private GameState currentState;
     private boolean isRedLight;
     private final List<Player> queuedPlayers = new ArrayList<>();
@@ -37,6 +44,7 @@ public class GameStateHandler {
         this.setLightCommand = new SetLightCommand(plugin);
         this.currentState = GameState.LOBBY;
         this.isRedLight = false;
+        this.tabManager = new TabManager(plugin);
         updateLightColor();
     }
 
@@ -61,13 +69,14 @@ public class GameStateHandler {
         } else if (getLobbyLocation() == null) {
             sender.sendMessage(ChatColor.RED + "Lobby location is not set.");
             return;
-        } else if (currentState == GameState.PLAYING) {
+        } else if (currentState == GameState.PLAYING || currentState == GameState.STARTING) {
             sender.sendMessage(ChatColor.RED + "Game is already running.");
             return;
         }
         sender.sendMessage(ChatColor.GREEN + "Game started!");
         currentState = GameState.STARTING;
         updateLightColor(); //briefly change lights to yellow to indicate starting state
+        registerListeners();
         GameUtils.startCountdown(plugin, 5, queuedPlayers, () -> {
             currentState = GameState.PLAYING;
             updateLightColor(); //light to green
@@ -92,6 +101,8 @@ public class GameStateHandler {
         sender.sendMessage(ChatColor.RED + "Game stopped!");
         currentState = GameState.STOPPED;
         updateLightColor();
+        unregisterListeners();
+        resetAllPlayerTabColors();
         plugin.getPlayerMovementListener().removeAllCorpses();
         Location lobbyLocation = getLobbyLocation();
         for (Player player : queuedPlayers) {
@@ -109,7 +120,6 @@ public class GameStateHandler {
             playerStateHandler.markPlayerAsDead(player);
             player.getInventory().clear();
             Location lobbyLocation = getLobbyLocation();
-            //TODO exempt afk/ manually removed players from getting shown death messages
             handlePlayerElimination(player);
             if (lobbyLocation != null) {
                 player.teleport(lobbyLocation);
@@ -244,6 +254,7 @@ public class GameStateHandler {
         }
         player.getInventory().clear();
         playerStateHandler.markPlayerAsSafe(player);
+        updatePlayerTabColor(player);
         handlePlayerFinish(player);
         checkGameEnd();
     }
@@ -356,6 +367,7 @@ public class GameStateHandler {
         Bukkit.broadcastMessage(deathMessage);
         player.sendMessage(ChatColor.RED + "You moved! RIP..");
         removePlayerFromGame(player);
+        updatePlayerTabColor(player);
         checkGameEnd();
     }
 
@@ -389,5 +401,33 @@ public class GameStateHandler {
     }
     public void removeQueuedPlayer(Player player) {
         queuedPlayers.remove(player);
+    }
+    public void registerListeners() {
+        Bukkit.getLogger().info("Registering listeners...");
+
+        Bukkit.getPluginManager().registerEvents(plugin.getPlayerMovementListener(), plugin);
+        Bukkit.getPluginManager().registerEvents(plugin.getPlayerInventoryListener(), plugin);
+        Bukkit.getPluginManager().registerEvents(plugin.getPlayerActivityListener(), plugin);
+    }
+
+    public void unregisterListeners() {
+        Bukkit.getLogger().info("Unregistering listeners...");
+        PlayerMoveEvent.getHandlerList().unregister(plugin.getPlayerMovementListener());
+        InventoryClickEvent.getHandlerList().unregister(plugin.getPlayerInventoryListener());
+        PlayerInteractEvent.getHandlerList().unregister(plugin.getPlayerActivityListener());
+    }
+    public void updatePlayerTabColor(Player player) {
+        if (getPlayerStateHandler().isPlayerSafe(player)) {
+            tabManager.setPlayerNameColor(player, ChatColor.GREEN);
+        } else if (getPlayerStateHandler().isPlayerDead(player)) {
+            tabManager.setPlayerNameColor(player, ChatColor.RED);
+        } else {
+            tabManager.setPlayerNameColor(player, ChatColor.GRAY);
+        }
+    }
+    public void resetAllPlayerTabColors() {
+        for (Player player : queuedPlayers) {
+            tabManager.setPlayerNameColor(player, ChatColor.GRAY);
+        }
     }
 }
