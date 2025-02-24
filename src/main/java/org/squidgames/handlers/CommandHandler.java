@@ -42,6 +42,15 @@ public class CommandHandler implements CommandExecutor {
             case "exempt":
                 gameStateHandler.exemptPlayer((Player) sender);
                 break;
+            case "pvp":
+                if (args.length == 2) {
+                    boolean enablePvp = Boolean.parseBoolean(args[1]);
+                    gameStateHandler.setPvpEnabled(enablePvp);
+                    sender.sendMessage(ChatColor.GREEN + "PvP has been " + (enablePvp ? "enabled" : "disabled") + ".");
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Usage: /sq pvp <true/false>");
+                }
+                break;
             case "clearstats":
                 if (sender instanceof Player) {
                     plugin.getStatsManager().clearStats();

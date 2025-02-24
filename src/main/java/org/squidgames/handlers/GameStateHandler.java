@@ -35,6 +35,7 @@ public class GameStateHandler {
     private GameState currentState;
     private boolean isRedLight;
     private final List<Player> queuedPlayers = new ArrayList<>();
+    private boolean pvpEnabled;
 
     public GameStateHandler(SquidGamesPlugin plugin) {
         this.plugin = plugin;
@@ -43,6 +44,7 @@ public class GameStateHandler {
         this.currentState = GameState.LOBBY;
         this.isRedLight = false;
         this.tabManager = new TabManager(plugin);
+        this.pvpEnabled = false;
         updateLightColor();
     }
 
@@ -51,7 +53,7 @@ public class GameStateHandler {
             return;
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if(!playerStateHandler.isPlayerExempt(player)) {
+            if (!playerStateHandler.isPlayerExempt(player)) {
                 addPlayerToQueue(player);
             }
         }
@@ -73,22 +75,36 @@ public class GameStateHandler {
         }
         sender.sendMessage(ChatColor.GREEN + "Game started!");
         currentState = GameState.STARTING;
-        updateLightColor(); //briefly change lights to yellow to indicate starting state
+        updateLightColor(); // briefly change lights to yellow to indicate starting state
         registerListeners();
-        GameUtils.startCountdown(plugin, 5, queuedPlayers, () -> {
-            currentState = GameState.PLAYING;
-            updateLightColor(); //light to green
-            playerStateHandler.resetPlayerStates();
-            Location spawnLocation = getSpawnLocation();
-            for (Player player : queuedPlayers) {
-                if (spawnLocation != null) {
-                    player.teleport(spawnLocation);
-                }
-                giveCyanLeatherOutfit(player);
+        for (Player player : queuedPlayers) {
+            player.setHealth(20);
+            player.setFoodLevel(20);
+        }
+        startAppropriateCountdown();
+    }
+
+    private void startAppropriateCountdown() {
+        if (pvpEnabled) {
+            GameUtils.startPvpCountdown(plugin, 5, queuedPlayers, this::onCountdownComplete);
+        } else {
+            GameUtils.startCountdown(plugin, 5, queuedPlayers, this::onCountdownComplete);
+        }
+    }
+
+    private void onCountdownComplete() {
+        currentState = GameState.PLAYING;
+        updateLightColor(); // light to green
+        playerStateHandler.resetPlayerStates();
+        Location spawnLocation = getSpawnLocation();
+        for (Player player : queuedPlayers) {
+            if (spawnLocation != null) {
+                player.teleport(spawnLocation);
             }
-            Bukkit.getLogger().info("Game state set to PLAYING and player states reset.");
-            startRedLightGreenLightGame();
-        });
+            giveCyanLeatherOutfit(player);
+        }
+        Bukkit.getLogger().info("Game state set to PLAYING and player states reset.");
+        startRedLightGreenLightGame();
     }
 
     public void stopGame(CommandSender sender) {
@@ -161,6 +177,11 @@ public class GameStateHandler {
 
                 GameUtils.fillInventoryWithWool(queuedPlayers, isRedLight, playerStateHandler);
 
+                if (isPvpEnabled()) {
+                    for (Player player : queuedPlayers) {
+                        player.setInvulnerable(false);
+                    }
+                }
                 boolean useRandomInterval = plugin.getConfig().getBoolean("useRandomInterval", false);
                 int minSeconds = plugin.getConfig().getInt("interval.min", 2);
                 int maxSeconds = plugin.getConfig().getInt("interval.max", 6);
@@ -195,7 +216,7 @@ public class GameStateHandler {
         return item;
     }
 
-    private Location getArenaLocation() {
+    public Location getArenaLocation() {
         if (!plugin.getConfig().contains("arena.corner1")) {
             return null;
         }
@@ -204,6 +225,33 @@ public class GameStateHandler {
         double y = plugin.getConfig().getDouble("arena.corner1.y");
         double z = plugin.getConfig().getDouble("arena.corner1.z");
         assert worldName != null;
+        return new Location(Bukkit.getWorld(worldName), x, y, z);
+    }
+    public Location getArenaCorner1() {
+        if (!plugin.getConfig().contains("arena.corner1")) {
+            return null;
+        }
+        String worldName = plugin.getConfig().getString("arena.corner1.world");
+        if (worldName == null) {
+            return null;
+        }
+        double x = plugin.getConfig().getDouble("arena.corner1.x");
+        double y = plugin.getConfig().getDouble("arena.corner1.y");
+        double z = plugin.getConfig().getDouble("arena.corner1.z");
+        return new Location(Bukkit.getWorld(worldName), x, y, z);
+    }
+
+    public Location getArenaCorner2() {
+        if (!plugin.getConfig().contains("arena.corner2")) {
+            return null;
+        }
+        String worldName = plugin.getConfig().getString("arena.corner2.world");
+        if (worldName == null) {
+            return null;
+        }
+        double x = plugin.getConfig().getDouble("arena.corner2.x");
+        double y = plugin.getConfig().getDouble("arena.corner2.y");
+        double z = plugin.getConfig().getDouble("arena.corner2.z");
         return new Location(Bukkit.getWorld(worldName), x, y, z);
     }
 
@@ -352,8 +400,6 @@ public class GameStateHandler {
         }
     }
 
-        player.teleport(Objects.requireNonNull(getLobbyLocation()));
-
     public List<Player> getQueuedPlayers() {
         return queuedPlayers;
     }
@@ -433,5 +479,12 @@ public class GameStateHandler {
         for (Player player : queuedPlayers) {
             tabManager.setPlayerNameColor(player, ChatColor.GRAY);
         }
+    }
+    public boolean isPvpEnabled() {
+        return pvpEnabled;
+    }
+
+    public void setPvpEnabled(boolean pvpEnabled) {
+        this.pvpEnabled = pvpEnabled;
     }
 }
