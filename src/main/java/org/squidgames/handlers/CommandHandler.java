@@ -56,17 +56,13 @@ public class CommandHandler implements CommandExecutor {
                     sender.sendMessage(ChatColor.RED + "Usage: /sq remove <player>");
                     return true;
                 }
-                if (!sender.hasPermission("squidgames.admin")) {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
-                    return true;
-                }
                 Player target = Bukkit.getPlayer(args[1]);
                 if (target == null) {
                     sender.sendMessage(ChatColor.RED + "Player not found.");
                     return true;
                 }
                 if(gameStateHandler.getCurrentState() == GameState.PLAYING) {
-                    gameStateHandler.removePlayerFromGame(target);
+                    gameStateHandler.playerDied(target);
                     sender.sendMessage(ChatColor.GREEN + target.getName() + " has been removed from the ongoing match.");
                     break;
                 } else {

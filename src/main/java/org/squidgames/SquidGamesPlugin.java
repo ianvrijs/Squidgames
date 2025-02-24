@@ -5,10 +5,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.squidgames.commands.CommandTabCompleter;
 import org.squidgames.handlers.CommandHandler;
 import org.squidgames.handlers.GameStateHandler;
-import org.squidgames.listeners.PlayerActivityListener;
-import org.squidgames.listeners.PlayerInventoryListener;
-import org.squidgames.listeners.PlayerJoinLeaveListener;
-import org.squidgames.listeners.PlayerMovementListener;
+import org.squidgames.listeners.*;
 import org.squidgames.stats.ScoreboardManager;
 import org.squidgames.stats.StatsManager;
 
@@ -44,12 +41,13 @@ public class SquidGamesPlugin extends JavaPlugin {
 
         Objects.requireNonNull(this.getCommand("sq")).setExecutor(new CommandHandler(this, gameStateHandler));
         Objects.requireNonNull(getCommand("sq")).setTabCompleter(new CommandTabCompleter());
+
         new BukkitRunnable() {
             @Override
             public void run() {
                 gameStateHandler.checkForAfkPlayers();
             }
-        }.runTaskTimer(this, 0, 20 * 60); // Check for idle players every minute
+        }.runTaskTimer(this, 0, 20 * 5); // Check for idle players every 5s
     }
     public StatsManager getStatsManager() {
         return statsManager;

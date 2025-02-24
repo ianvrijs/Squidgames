@@ -9,26 +9,24 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.squidgames.GameState;
 import org.squidgames.SquidGamesPlugin;
 import org.squidgames.TabManager;
-import org.squidgames.listeners.PlayerJoinLeaveListener;
 import org.squidgames.setup.SetLightCommand;
 import org.squidgames.utils.GameUtils;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
+
 import java.util.*;
 
 public class GameStateHandler {
     private final Map<UUID, Long> lastActivityTime = new HashMap<>();
-    private static final long AFK_TIMEOUT = 3 * 60 * 1000; // 3 mins in ms
+    private static final long AFK_TIMEOUT = 60 * 1000; // 1 min in ms
 
     private final SquidGamesPlugin plugin;
     private final PlayerStateHandler playerStateHandler;
@@ -53,8 +51,8 @@ public class GameStateHandler {
             return;
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (!playerStateHandler.isPlayerExempt(player)) {
-                queuedPlayers.add(player);
+            if(!playerStateHandler.isPlayerExempt(player)) {
+                addPlayerToQueue(player);
             }
         }
         if (queuedPlayers.size() < 2) {
@@ -94,7 +92,7 @@ public class GameStateHandler {
     }
 
     public void stopGame(CommandSender sender) {
-        if (currentState != GameState.PLAYING) {
+        if (currentState != GameState.PLAYING && currentState != GameState.STARTING) {
             sender.sendMessage(ChatColor.RED + "No game running.");
             return;
         }
@@ -111,7 +109,7 @@ public class GameStateHandler {
                 player.teleport(lobbyLocation);
             }
         }
-        queuedPlayers.clear(); //empty queued players list
+        queuedPlayers.clear();
         Bukkit.getLogger().info("Game state set to STOPPED.");
     }
 
@@ -124,7 +122,6 @@ public class GameStateHandler {
             if (lobbyLocation != null) {
                 player.teleport(lobbyLocation);
             }
-//            checkGameEnd();
         }
     }
 
@@ -331,16 +328,19 @@ public class GameStateHandler {
 
     public void checkForAfkPlayers() {
         long currentTime = System.currentTimeMillis();
-        for (Player player : queuedPlayers) {
-            if (currentState == GameState.PLAYING && lastActivityTime.containsKey(player.getUniqueId())) {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (lastActivityTime.containsKey(player.getUniqueId())) {
                 long lastActivity = lastActivityTime.get(player.getUniqueId());
                 if (currentTime - lastActivity > AFK_TIMEOUT) {
-                    playerDied(player);
-                    player.sendMessage(ChatColor.RED + "You have been removed from the game due to inactivity.");
+                    if (currentState == GameState.PLAYING && !playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
+                        //mark leftover players as dead when game is ongoing
+                        playerDied(player);
+                        player.sendMessage(ChatColor.RED + "You've been eliminated due to a lack of activity.");
+                        }
+                    }
                 }
             }
         }
-    }
 
     public void exemptPlayer(Player player) {
         if (playerStateHandler.isPlayerExempt(player)) {
@@ -352,11 +352,7 @@ public class GameStateHandler {
         }
     }
 
-    public void removePlayerFromGame(Player player) {
-        player.getInventory().clear();
         player.teleport(Objects.requireNonNull(getLobbyLocation()));
-//        player.sendMessage(ChatColor.RED + "You have been removed from the game.");
-    }
 
     public List<Player> getQueuedPlayers() {
         return queuedPlayers;
@@ -365,8 +361,6 @@ public class GameStateHandler {
     public void handlePlayerElimination(Player player) {
         String deathMessage = ChatColor.RED + "☠ " + player.getName();
         Bukkit.broadcastMessage(deathMessage);
-        player.sendMessage(ChatColor.RED + "You moved! RIP..");
-        removePlayerFromGame(player);
         updatePlayerTabColor(player);
         checkGameEnd();
     }
@@ -400,8 +394,18 @@ public class GameStateHandler {
         return true;
     }
     public void removeQueuedPlayer(Player player) {
-        queuedPlayers.remove(player);
+        if(queuedPlayers.contains(player)) {
+            queuedPlayers.remove(player);
+            Bukkit.getLogger().info("Player " + player.getName() + " removed from the queue.");
+        }
     }
+    public void addPlayerToQueue(Player player) {
+        if (!queuedPlayers.contains(player) && !playerStateHandler.isPlayerExempt(player)) {
+            queuedPlayers.add(player);
+            Bukkit.getLogger().info("Player " + player.getName() + " added to the queue.");
+        }
+    }
+
     public void registerListeners() {
         Bukkit.getLogger().info("Registering listeners...");
 

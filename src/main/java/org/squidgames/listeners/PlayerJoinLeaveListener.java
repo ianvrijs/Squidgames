@@ -30,17 +30,19 @@ public class PlayerJoinLeaveListener implements Listener {
         tabManager.setPlayerListHeaderFooter(player, ChatColor.RED + "Squid Games", ChatColor.GOLD + "Foxcraft");
 
         if (gameStateHandler.getCurrentState() == GameState.PLAYING) {
+            //add to queue and mark as dead to ensure proper game flow
+            gameStateHandler.addPlayerToQueue(player);
             gameStateHandler.playerDied(player);
         }
-
         updatePlayerTabColor(player);
+        player.getInventory().clear();
+        if(player.isInvisible()){
+            player.setInvisible(false);
+        }
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        if (gameStateHandler.getCurrentState() == GameState.PLAYING) {
-            gameStateHandler.playerDied(event.getPlayer());
-        }
         if (gameStateHandler.getQueuedPlayers().contains(event.getPlayer())) {
             gameStateHandler.removeQueuedPlayer(event.getPlayer());
         }
