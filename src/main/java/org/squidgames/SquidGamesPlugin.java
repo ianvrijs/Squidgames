@@ -5,10 +5,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.squidgames.commands.CommandTabCompleter;
 import org.squidgames.handlers.CommandHandler;
 import org.squidgames.handlers.GameStateHandler;
-import org.squidgames.listeners.PlayerActivityListener;
-import org.squidgames.listeners.PlayerInventoryListener;
-import org.squidgames.listeners.PlayerJoinLeaveListener;
-import org.squidgames.listeners.PlayerMovementListener;
+import org.squidgames.listeners.*;
 import org.squidgames.stats.ScoreboardManager;
 import org.squidgames.stats.StatsManager;
 
@@ -20,6 +17,7 @@ public class SquidGamesPlugin extends JavaPlugin {
     private PlayerActivityListener playerActivityListener;
     private PlayerJoinLeaveListener playerJoinLeaveListener;
     private PlayerInventoryListener playerInventoryListener;
+    private PvPListener pvpListener;
     private StatsManager statsManager;
     private ScoreboardManager scoreboardManager;
     private TabManager tabManager;
@@ -38,18 +36,20 @@ public class SquidGamesPlugin extends JavaPlugin {
         playerActivityListener = new PlayerActivityListener(gameStateHandler);
         playerInventoryListener = new PlayerInventoryListener();
         playerJoinLeaveListener = new PlayerJoinLeaveListener(gameStateHandler, scoreboardManager, tabManager);
+        pvpListener = new PvPListener(this, gameStateHandler);
 
         getServer().getPluginManager().registerEvents(playerJoinLeaveListener, this);
-
+        getServer().getPluginManager().registerEvents(pvpListener, this);
 
         Objects.requireNonNull(this.getCommand("sq")).setExecutor(new CommandHandler(this, gameStateHandler));
         Objects.requireNonNull(getCommand("sq")).setTabCompleter(new CommandTabCompleter());
+
         new BukkitRunnable() {
             @Override
             public void run() {
                 gameStateHandler.checkForAfkPlayers();
             }
-        }.runTaskTimer(this, 0, 20 * 60); // Check for idle players every minute
+        }.runTaskTimer(this, 0, 20 * 5); // Check for idle players every 5s
     }
     public StatsManager getStatsManager() {
         return statsManager;
@@ -70,4 +70,7 @@ public class SquidGamesPlugin extends JavaPlugin {
     }
 
 
+    public GameStateHandler getGameStateHandler() {
+        return gameStateHandler;
+    }
 }

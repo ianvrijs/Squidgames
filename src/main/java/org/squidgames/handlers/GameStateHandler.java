@@ -9,26 +9,25 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.squidgames.GameState;
 import org.squidgames.SquidGamesPlugin;
 import org.squidgames.TabManager;
-import org.squidgames.listeners.PlayerJoinLeaveListener;
 import org.squidgames.setup.SetLightCommand;
+import org.squidgames.utils.GameTimer;
 import org.squidgames.utils.GameUtils;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
+
 
 import java.util.*;
 
 public class GameStateHandler {
     private final Map<UUID, Long> lastActivityTime = new HashMap<>();
-    private static final long AFK_TIMEOUT = 3 * 60 * 1000; // 3 mins in ms
+    private static final long AFK_TIMEOUT = 60 * 1000; // 1 min in ms
 
     private final SquidGamesPlugin plugin;
     private final PlayerStateHandler playerStateHandler;
@@ -37,15 +36,20 @@ public class GameStateHandler {
     private GameState currentState;
     private boolean isRedLight;
     private final List<Player> queuedPlayers = new ArrayList<>();
+    private boolean pvpEnabled;
+    private GameTimer gameTimer;
 
     public GameStateHandler(SquidGamesPlugin plugin) {
         this.plugin = plugin;
+        this.gameTimer = new GameTimer(plugin);
         this.playerStateHandler = new PlayerStateHandler();
         this.setLightCommand = new SetLightCommand(plugin);
         this.currentState = GameState.LOBBY;
         this.isRedLight = false;
         this.tabManager = new TabManager(plugin);
+        this.pvpEnabled = false;
         updateLightColor();
+        loadGameTimeFromConfig();
     }
 
     public void startGame(CommandSender sender) {
@@ -54,7 +58,7 @@ public class GameStateHandler {
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (!playerStateHandler.isPlayerExempt(player)) {
-                queuedPlayers.add(player);
+                addPlayerToQueue(player);
             }
         }
         if (queuedPlayers.size() < 2) {
@@ -75,26 +79,42 @@ public class GameStateHandler {
         }
         sender.sendMessage(ChatColor.GREEN + "Game started!");
         currentState = GameState.STARTING;
-        updateLightColor(); //briefly change lights to yellow to indicate starting state
+        updateLightColor(); // briefly change lights to yellow to indicate starting state
         registerListeners();
-        GameUtils.startCountdown(plugin, 5, queuedPlayers, () -> {
-            currentState = GameState.PLAYING;
-            updateLightColor(); //light to green
-            playerStateHandler.resetPlayerStates();
-            Location spawnLocation = getSpawnLocation();
-            for (Player player : queuedPlayers) {
-                if (spawnLocation != null) {
-                    player.teleport(spawnLocation);
-                }
-                giveCyanLeatherOutfit(player);
+        for (Player player : queuedPlayers) {
+            player.setHealth(20);
+            player.setFoodLevel(20);
+        }
+        startAppropriateCountdown();
+    }
+
+    private void startAppropriateCountdown() {
+        if (pvpEnabled) {
+            GameUtils.startPvpCountdown(plugin, 5, queuedPlayers, this::onCountdownComplete);
+        } else {
+            GameUtils.startCountdown(plugin, 5, queuedPlayers, this::onCountdownComplete);
+        }
+    }
+
+    private void onCountdownComplete() {
+        currentState = GameState.PLAYING;
+        updateLightColor(); // light to green
+        playerStateHandler.resetPlayerStates();
+        gameTimer.startGameTimer();
+        Location spawnLocation = getSpawnLocation();
+        for (Player player : queuedPlayers) {
+            if (spawnLocation != null) {
+                player.teleport(spawnLocation);
             }
-            Bukkit.getLogger().info("Game state set to PLAYING and player states reset.");
-            startRedLightGreenLightGame();
-        });
+
+            giveCyanLeatherOutfit(player);
+        }
+        Bukkit.getLogger().info("Game state set to PLAYING and player states reset.");
+        startRedLightGreenLightGame();
     }
 
     public void stopGame(CommandSender sender) {
-        if (currentState != GameState.PLAYING) {
+        if (currentState != GameState.PLAYING && currentState != GameState.STARTING) {
             sender.sendMessage(ChatColor.RED + "No game running.");
             return;
         }
@@ -103,6 +123,9 @@ public class GameStateHandler {
         updateLightColor();
         unregisterListeners();
         resetAllPlayerTabColors();
+        if (gameTimer.getGameTimerBar() != null) {
+            gameTimer.getGameTimerBar().removeAll();
+        }
         plugin.getPlayerMovementListener().removeAllCorpses();
         Location lobbyLocation = getLobbyLocation();
         for (Player player : queuedPlayers) {
@@ -111,7 +134,7 @@ public class GameStateHandler {
                 player.teleport(lobbyLocation);
             }
         }
-        queuedPlayers.clear(); //empty queued players list
+        queuedPlayers.clear();
         Bukkit.getLogger().info("Game state set to STOPPED.");
     }
 
@@ -124,7 +147,6 @@ public class GameStateHandler {
             if (lobbyLocation != null) {
                 player.teleport(lobbyLocation);
             }
-//            checkGameEnd();
         }
     }
 
@@ -164,6 +186,11 @@ public class GameStateHandler {
 
                 GameUtils.fillInventoryWithWool(queuedPlayers, isRedLight, playerStateHandler);
 
+                if (isPvpEnabled()) {
+                    for (Player player : queuedPlayers) {
+                        player.setInvulnerable(false);
+                    }
+                }
                 boolean useRandomInterval = plugin.getConfig().getBoolean("useRandomInterval", false);
                 int minSeconds = plugin.getConfig().getInt("interval.min", 2);
                 int maxSeconds = plugin.getConfig().getInt("interval.max", 6);
@@ -198,7 +225,7 @@ public class GameStateHandler {
         return item;
     }
 
-    private Location getArenaLocation() {
+    public Location getArenaLocation() {
         if (!plugin.getConfig().contains("arena.corner1")) {
             return null;
         }
@@ -207,6 +234,33 @@ public class GameStateHandler {
         double y = plugin.getConfig().getDouble("arena.corner1.y");
         double z = plugin.getConfig().getDouble("arena.corner1.z");
         assert worldName != null;
+        return new Location(Bukkit.getWorld(worldName), x, y, z);
+    }
+    public Location getArenaCorner1() {
+        if (!plugin.getConfig().contains("arena.corner1")) {
+            return null;
+        }
+        String worldName = plugin.getConfig().getString("arena.corner1.world");
+        if (worldName == null) {
+            return null;
+        }
+        double x = plugin.getConfig().getDouble("arena.corner1.x");
+        double y = plugin.getConfig().getDouble("arena.corner1.y");
+        double z = plugin.getConfig().getDouble("arena.corner1.z");
+        return new Location(Bukkit.getWorld(worldName), x, y, z);
+    }
+
+    public Location getArenaCorner2() {
+        if (!plugin.getConfig().contains("arena.corner2")) {
+            return null;
+        }
+        String worldName = plugin.getConfig().getString("arena.corner2.world");
+        if (worldName == null) {
+            return null;
+        }
+        double x = plugin.getConfig().getDouble("arena.corner2.x");
+        double y = plugin.getConfig().getDouble("arena.corner2.y");
+        double z = plugin.getConfig().getDouble("arena.corner2.z");
         return new Location(Bukkit.getWorld(worldName), x, y, z);
     }
 
@@ -332,15 +386,18 @@ public class GameStateHandler {
     public void checkForAfkPlayers() {
         long currentTime = System.currentTimeMillis();
         for (Player player : queuedPlayers) {
-            if (currentState == GameState.PLAYING && lastActivityTime.containsKey(player.getUniqueId())) {
+            if (lastActivityTime.containsKey(player.getUniqueId())) {
                 long lastActivity = lastActivityTime.get(player.getUniqueId());
                 if (currentTime - lastActivity > AFK_TIMEOUT) {
-                    playerDied(player);
-                    player.sendMessage(ChatColor.RED + "You have been removed from the game due to inactivity.");
+                    if (currentState == GameState.PLAYING && !playerStateHandler.isPlayerSafe(player) && !playerStateHandler.isPlayerDead(player)) {
+                        //mark leftover players as dead when game is ongoing
+                        playerDied(player);
+                        player.sendMessage(ChatColor.RED + "You've been eliminated due to a lack of activity.");
+                        }
+                    }
                 }
             }
         }
-    }
 
     public void exemptPlayer(Player player) {
         if (playerStateHandler.isPlayerExempt(player)) {
@@ -352,12 +409,6 @@ public class GameStateHandler {
         }
     }
 
-    public void removePlayerFromGame(Player player) {
-        player.getInventory().clear();
-        player.teleport(Objects.requireNonNull(getLobbyLocation()));
-//        player.sendMessage(ChatColor.RED + "You have been removed from the game.");
-    }
-
     public List<Player> getQueuedPlayers() {
         return queuedPlayers;
     }
@@ -365,8 +416,6 @@ public class GameStateHandler {
     public void handlePlayerElimination(Player player) {
         String deathMessage = ChatColor.RED + "☠ " + player.getName();
         Bukkit.broadcastMessage(deathMessage);
-        player.sendMessage(ChatColor.RED + "You moved! RIP..");
-        removePlayerFromGame(player);
         updatePlayerTabColor(player);
         checkGameEnd();
     }
@@ -400,8 +449,18 @@ public class GameStateHandler {
         return true;
     }
     public void removeQueuedPlayer(Player player) {
-        queuedPlayers.remove(player);
+        if(queuedPlayers.contains(player)) {
+            queuedPlayers.remove(player);
+            Bukkit.getLogger().info("Player " + player.getName() + " removed from the queue.");
+        }
     }
+    public void addPlayerToQueue(Player player) {
+        if (!queuedPlayers.contains(player) && !playerStateHandler.isPlayerExempt(player)) {
+            queuedPlayers.add(player);
+            Bukkit.getLogger().info("Player " + player.getName() + " added to the queue.");
+        }
+    }
+
     public void registerListeners() {
         Bukkit.getLogger().info("Registering listeners...");
 
@@ -429,5 +488,19 @@ public class GameStateHandler {
         for (Player player : queuedPlayers) {
             tabManager.setPlayerNameColor(player, ChatColor.GRAY);
         }
+    }
+    public boolean isPvpEnabled() {
+        return pvpEnabled;
+    }
+
+    public void setPvpEnabled(boolean pvpEnabled) {
+        this.pvpEnabled = pvpEnabled;
+    }
+    public void setGameTime(int minutes) {
+        gameTimer.setGameTime(minutes);
+    }
+    private void loadGameTimeFromConfig() {
+        int gameTimeMinutes = plugin.getConfig().getInt("gameTimeMinutes", 5); // default = 5mins
+        gameTimer.setGameTime(gameTimeMinutes);
     }
 }

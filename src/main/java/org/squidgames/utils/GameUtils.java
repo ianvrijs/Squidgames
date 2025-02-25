@@ -3,6 +3,7 @@ package org.squidgames.utils;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.squidgames.SquidGamesPlugin;
 import org.squidgames.handlers.PlayerStateHandler;
@@ -80,5 +81,32 @@ public class GameUtils {
             }
             player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         }
+    }
+
+    public static void startPvpCountdown(SquidGamesPlugin plugin, int seconds, List<Player> queuedPlayers, Runnable onComplete) {
+        new BukkitRunnable() {
+            int countdown = seconds;
+
+            @Override
+            public void run() {
+                if (countdown <= 0) {
+                    for (Player player : queuedPlayers) {
+                        player.sendTitle(ChatColor.RED + "PvP Enabled!", ChatColor.YELLOW + "Fight for your life!", 10, 20, 10);
+                        player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 1.0f);
+                    }
+                    onComplete.run();
+                    cancel();
+                    return;
+                }
+
+                for (Player player : queuedPlayers) {
+                    player.sendTitle(ChatColor.RED + "PvP starts in", ChatColor.YELLOW + String.valueOf(countdown), 10, 20, 10);
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
+                    player.spawnParticle(Particle.EXPLOSION, player.getLocation(), 1);
+                }
+
+                countdown--;
+            }
+        }.runTaskTimer(plugin, 0, 20); // 1s
     }
 }

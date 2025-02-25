@@ -42,6 +42,15 @@ public class CommandHandler implements CommandExecutor {
             case "exempt":
                 gameStateHandler.exemptPlayer((Player) sender);
                 break;
+            case "pvp":
+                if (args.length == 2) {
+                    boolean enablePvp = Boolean.parseBoolean(args[1]);
+                    gameStateHandler.setPvpEnabled(enablePvp);
+                    sender.sendMessage(ChatColor.GREEN + "PvP has been " + (enablePvp ? "enabled" : "disabled") + ".");
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Usage: /sq pvp <true/false>");
+                }
+                break;
             case "clearstats":
                 if (sender instanceof Player) {
                     plugin.getStatsManager().clearStats();
@@ -56,21 +65,21 @@ public class CommandHandler implements CommandExecutor {
                     sender.sendMessage(ChatColor.RED + "Usage: /sq remove <player>");
                     return true;
                 }
-                if (!sender.hasPermission("squidgames.admin")) {
-                    sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
-                    return true;
-                }
                 Player target = Bukkit.getPlayer(args[1]);
                 if (target == null) {
                     sender.sendMessage(ChatColor.RED + "Player not found.");
                     return true;
                 }
+                if (gameStateHandler.getPlayerStateHandler().isPlayerExempt(target)) {
+                    sender.sendMessage(ChatColor.RED + "Player cannot be removed.");
+                    return true;
+                }
                 if(gameStateHandler.getCurrentState() == GameState.PLAYING) {
-                    gameStateHandler.removePlayerFromGame(target);
+                    gameStateHandler.playerDied(target);
                     sender.sendMessage(ChatColor.GREEN + target.getName() + " has been removed from the ongoing match.");
                     break;
                 } else {
-                    sender.sendMessage(ChatColor.RED + "There is no ongoing game to remove players from...");
+                    sender.sendMessage(ChatColor.RED + "Player isn't enqueued or the game hasn't started yet.");
                     break;
                 }
 
@@ -94,6 +103,21 @@ public class CommandHandler implements CommandExecutor {
                     break;
                 case "setlobby":
                     setLocationCommand.execute(sender, "lobby");
+                    break;
+                case "setgametime":
+                    if (args.length == 3) {
+                        try {
+                            int minutes = Integer.parseInt(args[2]);
+                            plugin.getConfig().set("gameTimeMinutes", minutes);
+                            plugin.saveConfig();
+                            gameStateHandler.setGameTime(minutes);
+                            sender.sendMessage(ChatColor.GREEN + "Game time set to " + minutes + " minutes.");
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage(ChatColor.RED + "Invalid number format. Usage: /sq setup setgametime {minutes}");
+                        }
+                    } else {
+                        sender.sendMessage(ChatColor.RED + "Usage: /sq setup setgametime {minutes}");
+                    }
                     break;
                 case "setinterval":
                     if (args.length != 4) {

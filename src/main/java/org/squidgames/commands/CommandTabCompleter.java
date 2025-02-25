@@ -10,18 +10,20 @@ import java.util.List;
 
 public class CommandTabCompleter implements TabCompleter {
 
-    private static final List<String> SUB_COMMANDS = Arrays.asList("setup", "start", "stop", "exempt", "remove", "clearstats");
-    private static final List<String> SETUP_COMMANDS = Arrays.asList("setspawn", "setlobby", "setarena", "setsafezone", "setlight", "setrandom", "setinterval");
+    private static final List<String> SUB_COMMANDS = Arrays.asList("setup", "start", "stop", "exempt", "remove", "clearstats", "pvp");
+    private static final List<String> SETUP_COMMANDS = Arrays.asList("setspawn", "setlobby", "setarena", "setsafezone", "setlight", "setrandom", "setinterval", "setgametime");
     private static final List<String> TRUE_FALSE = Arrays.asList("true", "false");
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             return filterStartingWith(args[0], SUB_COMMANDS);
-        } else if (args.length == 2 && args[0].equalsIgnoreCase("setup")) {
-            return filterStartingWith(args[1], SETUP_COMMANDS);
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("setup") && args[1].equalsIgnoreCase("setrandom")) {
-            return filterStartingWith(args[2], TRUE_FALSE);
+        } else if (args.length == 2) {
+            if (args[0].equalsIgnoreCase("setup")) {
+                return filterStartingWith(args[1], SETUP_COMMANDS);
+            } else if (args[0].equalsIgnoreCase("pvp")) {
+                return filterStartingWith(args[1], TRUE_FALSE);
+            }
         }
         return new ArrayList<>();
     }
