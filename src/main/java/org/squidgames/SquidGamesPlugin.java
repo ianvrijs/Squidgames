@@ -70,4 +70,7 @@ public class SquidGamesPlugin extends JavaPlugin {
     }
 
 
+    public GameStateHandler getGameStateHandler() {
+        return gameStateHandler;
+    }
 }

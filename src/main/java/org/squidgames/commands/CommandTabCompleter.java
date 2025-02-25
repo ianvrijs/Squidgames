@@ -11,7 +11,7 @@ import java.util.List;
 public class CommandTabCompleter implements TabCompleter {
 
     private static final List<String> SUB_COMMANDS = Arrays.asList("setup", "start", "stop", "exempt", "remove", "clearstats", "pvp");
-    private static final List<String> SETUP_COMMANDS = Arrays.asList("setspawn", "setlobby", "setarena", "setsafezone", "setlight", "setrandom", "setinterval");
+    private static final List<String> SETUP_COMMANDS = Arrays.asList("setspawn", "setlobby", "setarena", "setsafezone", "setlight", "setrandom", "setinterval", "setgametime");
     private static final List<String> TRUE_FALSE = Arrays.asList("true", "false");
 
     @Override

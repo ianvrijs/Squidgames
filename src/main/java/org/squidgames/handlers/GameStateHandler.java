@@ -17,6 +17,7 @@ import org.squidgames.GameState;
 import org.squidgames.SquidGamesPlugin;
 import org.squidgames.TabManager;
 import org.squidgames.setup.SetLightCommand;
+import org.squidgames.utils.GameTimer;
 import org.squidgames.utils.GameUtils;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -36,9 +37,11 @@ public class GameStateHandler {
     private boolean isRedLight;
     private final List<Player> queuedPlayers = new ArrayList<>();
     private boolean pvpEnabled;
+    private GameTimer gameTimer;
 
     public GameStateHandler(SquidGamesPlugin plugin) {
         this.plugin = plugin;
+        this.gameTimer = new GameTimer(plugin);
         this.playerStateHandler = new PlayerStateHandler();
         this.setLightCommand = new SetLightCommand(plugin);
         this.currentState = GameState.LOBBY;
@@ -46,6 +49,7 @@ public class GameStateHandler {
         this.tabManager = new TabManager(plugin);
         this.pvpEnabled = false;
         updateLightColor();
+        loadGameTimeFromConfig();
     }
 
     public void startGame(CommandSender sender) {
@@ -96,11 +100,13 @@ public class GameStateHandler {
         currentState = GameState.PLAYING;
         updateLightColor(); // light to green
         playerStateHandler.resetPlayerStates();
+        gameTimer.startGameTimer();
         Location spawnLocation = getSpawnLocation();
         for (Player player : queuedPlayers) {
             if (spawnLocation != null) {
                 player.teleport(spawnLocation);
             }
+
             giveCyanLeatherOutfit(player);
         }
         Bukkit.getLogger().info("Game state set to PLAYING and player states reset.");
@@ -117,6 +123,9 @@ public class GameStateHandler {
         updateLightColor();
         unregisterListeners();
         resetAllPlayerTabColors();
+        if (gameTimer.getGameTimerBar() != null) {
+            gameTimer.getGameTimerBar().removeAll();
+        }
         plugin.getPlayerMovementListener().removeAllCorpses();
         Location lobbyLocation = getLobbyLocation();
         for (Player player : queuedPlayers) {
@@ -376,7 +385,7 @@ public class GameStateHandler {
 
     public void checkForAfkPlayers() {
         long currentTime = System.currentTimeMillis();
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        for (Player player : queuedPlayers) {
             if (lastActivityTime.containsKey(player.getUniqueId())) {
                 long lastActivity = lastActivityTime.get(player.getUniqueId());
                 if (currentTime - lastActivity > AFK_TIMEOUT) {
@@ -486,5 +495,12 @@ public class GameStateHandler {
 
     public void setPvpEnabled(boolean pvpEnabled) {
         this.pvpEnabled = pvpEnabled;
+    }
+    public void setGameTime(int minutes) {
+        gameTimer.setGameTime(minutes);
+    }
+    private void loadGameTimeFromConfig() {
+        int gameTimeMinutes = plugin.getConfig().getInt("gameTimeMinutes", 5); // default = 5mins
+        gameTimer.setGameTime(gameTimeMinutes);
     }
 }
