@@ -1,5 +1,7 @@
 package org.squidgames;
 
+import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.squidgames.commands.CommandTabCompleter;
@@ -43,7 +45,18 @@ public class SquidGamesPlugin extends JavaPlugin {
 
         Objects.requireNonNull(this.getCommand("sq")).setExecutor(new CommandHandler(this, gameStateHandler));
         Objects.requireNonNull(getCommand("sq")).setTabCompleter(new CommandTabCompleter());
-
+        String worldName = getConfig().getString("spawn.world");
+        if (worldName != null) {
+            World world = Bukkit.getWorld(worldName);
+            if (world != null) {
+                world.setPVP(true);
+                getLogger().info("PvP has been enabled in world: " + worldName);
+            } else {
+                getLogger().warning("World not found: " + worldName);
+            }
+        } else {
+            getLogger().warning("World name not specified in config.");
+        }
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -73,4 +86,5 @@ public class SquidGamesPlugin extends JavaPlugin {
     public GameStateHandler getGameStateHandler() {
         return gameStateHandler;
     }
+
 }
