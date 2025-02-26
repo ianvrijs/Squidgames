@@ -24,8 +24,9 @@ This is a Minecraft plugin for a Squid Games-inspired game mode. The plugin is b
 1. Clone the repository:
     ```sh
     git clone https://github.com/ianvrijs/Squidgames.git
+
     cd Squidgames
-    ```
+
 
 2. Build the plugin using Maven:
     ```sh
