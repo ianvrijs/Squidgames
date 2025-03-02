@@ -6,6 +6,7 @@ import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
+import org.squidgames.GameState;
 import org.squidgames.SquidGamesPlugin;
 import org.bukkit.ChatColor;
 
@@ -95,5 +96,13 @@ public class GameTimer {
 
     public BossBar getGameTimerBar() {
         return gameTimerBar;
+    }
+    public void stopGameTimer() {
+        if (timerTask != null) {
+            timerTask.cancel();
+        }
+        if (gameTimerBar != null) {
+            gameTimerBar.setVisible(false);
+        }
     }
 }

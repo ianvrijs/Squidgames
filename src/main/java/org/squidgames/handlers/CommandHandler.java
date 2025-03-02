@@ -40,7 +40,24 @@ public class CommandHandler implements CommandExecutor {
                 gameStateHandler.stopGame(sender);
                 break;
             case "exempt":
-                gameStateHandler.exemptPlayer((Player) sender);
+                if (args.length == 1) {
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        gameStateHandler.exemptPlayer(player);
+                    } else {
+                        sender.sendMessage(ChatColor.RED + "This command can only be executed by a player.");
+                    }
+                } else if (args.length == 2) {
+                    Player target = Bukkit.getPlayer(args[1]);
+                    if (target != null) {
+                        gameStateHandler.exemptPlayer(target);
+                        sender.sendMessage(ChatColor.GREEN + target.getName() + " has been removed from the queue.");
+                    } else {
+                        sender.sendMessage(ChatColor.RED + "Player not found.");
+                    }
+                } else {
+                    sender.sendMessage(ChatColor.RED + "Usage: /sq exempt [player]");
+                }
                 break;
             case "pvp":
                 if (args.length == 2) {

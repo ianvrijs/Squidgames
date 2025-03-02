@@ -123,6 +123,7 @@ public class GameStateHandler {
         updateLightColor();
         unregisterListeners();
         resetAllPlayerTabColors();
+        gameTimer.stopGameTimer();
         if (gameTimer.getGameTimerBar() != null) {
             gameTimer.getGameTimerBar().removeAll();
         }
@@ -322,6 +323,7 @@ public class GameStateHandler {
         }
         if (allSafeOrEliminated) {
             GameUtils.displayEndGameResults(playerStateHandler, queuedPlayers);
+            gameTimer.stopGameTimer();
             List<Player> safePlayers = new ArrayList<>(playerStateHandler.getSafePlayers());
             plugin.getStatsManager().saveAllQueuedPlayers(queuedPlayers);
             for (Player player : queuedPlayers) {
